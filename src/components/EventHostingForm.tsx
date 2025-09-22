@@ -10,6 +10,7 @@ import { RoundsForm } from './forms/RoundsForm';
 import { RewardsForm } from './forms/RewardsForm';
 import { FeaturesForm } from './forms/FeaturesForm';
 import { PreviewPublishForm } from './forms/PreviewPublishForm';
+import { EventData } from '@/types';
 
 interface EventHostingFormProps {
   onClose?: () => void;
@@ -26,90 +27,12 @@ const steps = [
   { id: 7, title: 'Preview & Publish', component: PreviewPublishForm },
 ];
 
-interface EventData {
-  basicDetails: {
-    eventTitle?: string;
-    tagline?: string;
-    banner?: File | null;
-    organizerName?: string;
-    contactEmail?: string;
-    contactPhone?: string;
-    websiteUrl?: string;
-    assignedRoles?: {
-      teachers: Array<{
-        id: string;
-        name: string;
-        branch: string;
-        role: 'teacher';
-      }>;
-      host: {
-        id: string;
-        name: string;
-        branch: string;
-        role: 'host';
-      } | null;
-      coHosts: Array<{
-        id: string;
-        name: string;
-        branch: string;
-        role: 'co-host';
-      }>;
-      coordinators: Array<{
-        id: string;
-        name: string;
-        branch: string;
-        role: 'coordinator';
-      }>;
-      volunteers: Array<{
-        id: string;
-        name: string;
-        branch: string;
-        role: 'volunteer';
-      }>;
-    };
-    whoFillsForm?: 'teacher' | 'host' | null;
-  };
-  aboutEvent: {
-    description: string;
-    category: string;
-    mode: 'online' | 'offline' | 'hybrid';
-    location: string;
-  };
-  eligibility: {
-    minTeamSize: number;
-    maxTeamSize: number;
-    allowSoloParticipation: boolean;
-    restrictions: string[];
-    requirements: string[];
-  };
-  rounds: Array<{
-    title: string;
-    description: string;
-    date?: string;
-    duration?: string;
-    rules?: string[];
-  }>;
-  rewards: {
-    prizePool: string;
-    prizes: Array<{
-      position: string;
-      prize: string;
-    }>;
-    certificates: boolean;
-    additionalPerks: string[];
-  };
-  features: {
-    highlights: string[];
-    rules: string[];
-    guidelines: string[];
-  };
-}
-
 const isStepValid = (step: number, data: EventData): boolean => {
   switch(step) {
     case 1: // Basic Details
       return Boolean(
         data.basicDetails.eventTitle &&
+        data.basicDetails.assignedRoles?.teachers.length &&
         data.basicDetails.assignedRoles?.teachers.length > 0 &&
         data.basicDetails.assignedRoles?.host &&
         data.basicDetails.whoFillsForm
@@ -122,20 +45,21 @@ const isStepValid = (step: number, data: EventData): boolean => {
         (data.aboutEvent.mode === 'online' || data.aboutEvent.location)
       );
     case 3: // Eligibility
-      return Boolean(data.eligibility.minTeamSize && data.eligibility.maxTeamSize);
+      return Boolean(
+        data.eligibility.minTeamSize &&
+        data.eligibility.maxTeamSize &&
+        data.eligibility.minTeamSize <= data.eligibility.maxTeamSize
+      );
     case 4: // Rounds
       return data.rounds.length > 0 && data.rounds.every(round => 
-        round.title && round.description && round.date
+        round.title && round.description
       );
     case 5: // Rewards
-      return Boolean(data.rewards.certificates || data.rewards.prizes.length > 0);
+      return true; // Rewards are optional
     case 6: // Features
-      return Boolean(
-        data.features.highlights.length > 0 &&
-        data.features.rules.length > 0
-      );
+      return true; // Features are optional
     case 7: // Preview
-      return true;
+      return true; // Always valid for preview
     default:
       return false;
   }
@@ -144,18 +68,6 @@ const isStepValid = (step: number, data: EventData): boolean => {
 const isFormComplete = (data: EventData): boolean => {
   return [1, 2, 3, 4, 5, 6].every(step => isStepValid(step, data));
 };
-
-interface EventFormContext {
-  eventData: EventData;
-  onClose?: () => void;
-}
-
-function useEventForm(): EventFormContext {
-  return {
-    eventData: {} as EventData,
-    onClose: undefined
-  };
-}
 
 export const EventHostingForm: React.FC<EventHostingFormProps> = ({ onClose, inDialog = false }) => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -193,15 +105,13 @@ export const EventHostingForm: React.FC<EventHostingFormProps> = ({ onClose, inD
     },
     rounds: [],
     rewards: {
-      prizePool: '',
       prizes: [],
       certificates: true,
-      additionalPerks: [],
+      otherRewards: [],
     },
     features: {
-      highlights: [],
-      rules: [],
-      guidelines: [],
+      features: [],
+      requirements: [],
     },
   });
 
@@ -222,7 +132,7 @@ export const EventHostingForm: React.FC<EventHostingFormProps> = ({ onClose, inD
     setCurrentStep(stepId);
   };
 
-  const updateEventData = (section: keyof EventData, data: any) => {
+  const updateEventData = (section: keyof EventData, data: unknown) => {
     setEventData(prev => ({
       ...prev,
       [section]: data,

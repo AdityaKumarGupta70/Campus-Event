@@ -1,37 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { useToast } from '@/components/ui/use-toast';
-
-interface Notification {
-  id: string;
-  type: 'assignment' | 'approval' | 'rejection';
-  title: string;
-  message: string;
-  eventId: string;
-  eventTitle: string;
-  fromUser: {
-    id: string;
-    name: string;
-    role: string;
-  };
-  toUser: {
-    id: string;
-    name: string;
-    role: string;
-  };
-  timestamp: Date;
-  status: 'unread' | 'read';
-  actionRequired?: boolean;
-  remarks?: string;
-}
-
-interface NotificationContextType {
-  notifications: Notification[];
-  addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'status'>) => void;
-  markAsRead: (notificationId: string) => void;
-  clearNotification: (notificationId: string) => void;
-  getUnreadCount: () => number;
-  getNotificationsForUser: (userId: string) => Notification[];
-}
+import { Notification, NotificationContextType } from '@/types/notification';
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
