@@ -6,6 +6,7 @@ import { AdminSidebar } from '@/components/sidebars/AdminSidebar';
 import { FacultySidebar } from '@/components/sidebars/FacultySidebar';
 import { StudentSidebar } from '@/components/sidebars/StudentSidebar';
 import { NotificationsDropdown } from '@/components/NotificationsDropdown';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 const DashboardLayout: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
@@ -30,16 +31,19 @@ const DashboardLayout: React.FC = () => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gray-50">
+      <div className="min-h-screen flex w-full bg-gradient-to-br from-background via-background to-muted/20">
         {getSidebar()}
         <div className="flex-1 flex flex-col">
-          <header className="bg-white shadow-sm border-b p-4">
-            <div className="flex justify-end">
+          <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border/50 shadow-sm">
+            <div className="flex justify-end items-center gap-4 p-4">
+              <ThemeToggle />
               <NotificationsDropdown />
             </div>
           </header>
-          <main className="flex-1 p-6">
-            <Outlet />
+          <main className="flex-1 p-6 animate-fade-in">
+            <div className="max-w-full mx-auto">
+              <Outlet />
+            </div>
           </main>
         </div>
       </div>
