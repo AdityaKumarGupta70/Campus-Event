@@ -6,53 +6,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Upload, X, Image } from 'lucide-react';
 import { RoleAssignmentForm } from './RoleAssignmentForm';
+import { EventData, FormDataUpdateFunction } from '@/types';
 
 interface Props {
-  data: {
-    basicDetails: {
-      eventTitle?: string;
-      tagline?: string;
-      banner?: File | null;
-      organizerName?: string;
-      contactEmail?: string;
-      contactPhone?: string;
-      websiteUrl?: string;
-      assignedRoles?: {
-        teachers: Array<{
-          id: string;
-          name: string;
-          branch: string;
-          role: 'teacher';
-        }>;
-        host: {
-          id: string;
-          name: string;
-          branch: string;
-          role: 'host';
-        } | null;
-        coHosts: Array<{
-          id: string;
-          name: string;
-          branch: string;
-          role: 'co-host';
-        }>;
-        coordinators: Array<{
-          id: string;
-          name: string;
-          branch: string;
-          role: 'coordinator';
-        }>;
-        volunteers: Array<{
-          id: string;
-          name: string;
-          branch: string;
-          role: 'volunteer';
-        }>;
-      };
-      whoFillsForm?: 'teacher' | 'host' | null;
-    };
-  };
-  updateData: (section: string, data: any) => void;
+  data: EventData;
+  updateData: FormDataUpdateFunction;
   onNext: () => void;
   onPrevious: () => void;
 }
@@ -78,7 +36,7 @@ export const BasicDetailsForm: React.FC<Props> = ({ data, updateData, onNext }) 
 
   const [dragActive, setDragActive] = useState(false);
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: unknown) => {
     const newData = { ...formData, [field]: value };
     setFormData(newData);
     updateData('basicDetails', newData);
