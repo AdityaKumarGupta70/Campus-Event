@@ -6,7 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { EventHostingForm } from '@/components/EventHostingForm';
 import { DraftEventCard } from '@/components/DraftEventCard';
-import { Plus, Search, Calendar, Users, MapPin, ArrowLeft, FileEdit, Loader2 } from 'lucide-react';
+import { ApprovalPendingEventCard } from '@/components/ApprovalPendingEventCard';
+import { StudentHostNotificationCard } from '@/components/StudentHostNotificationCard';
+import { Plus, Search, Calendar, Users, MapPin, ArrowLeft, FileEdit, Loader2, Clock, AlertCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -17,12 +19,19 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import { useNotifications } from '@/contexts/NotificationContext';
 
 const EventsPage: React.FC = () => {
   const { user } = useAuth();
+  const { getNotificationsForUser } = useNotifications();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentTab, setCurrentTab] = useState('all');
+  
+  // Get host assignment notifications for the current user
+  const hostNotifications = user ? getNotificationsForUser(user.id).filter(
+    notification => notification.type === 'host-assignment' && notification.status === 'unread'
+  ) : [];
   
   // Mock draft events - replace with actual data from your backend
   const [draftEvents, setDraftEvents] = useState([
@@ -35,6 +44,9 @@ const EventsPage: React.FC = () => {
         name: 'Dr. Smith',
         role: 'Faculty',
       },
+      description: 'Annual technology symposium featuring latest innovations',
+      hostAssigned: true,
+      completionStatus: 'pending-host-input',
     },
     {
       id: '2',
@@ -45,6 +57,81 @@ const EventsPage: React.FC = () => {
         name: 'Prof. Johnson',
         role: 'Faculty',
       },
+      description: 'Inter-college competitive programming event',
+      hostAssigned: true,
+      completionStatus: 'awaiting-approval',
+    },
+  ]);
+
+  // Mock pending approval events for faculty
+  const [pendingApprovalEvents, setPendingApprovalEvents] = useState([
+    {
+      id: 'pending-1',
+      title: 'Cultural Night 2024',
+      description: 'Annual cultural celebration with performances and exhibitions',
+      submittedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+      submittedBy: {
+        id: 'f1',
+        name: 'Prof. Sarah Wilson',
+        role: 'Faculty',
+      },
+      host: {
+        id: 's3',
+        name: 'Rahul Singh',
+        branch: 'Computer Science',
+      },
+      assignedRoles: {
+        teachers: [
+          { id: 't1', name: 'Dr. John Smith', branch: 'Computer Science' },
+          { id: 't2', name: 'Prof. Jane Doe', branch: 'Electronics' },
+        ],
+        coHosts: [
+          { id: 's4', name: 'Sneha Sharma', branch: 'Information Technology' },
+        ],
+        coordinators: [
+          { id: 's5', name: 'Amit Gupta', branch: 'Mechanical' },
+        ],
+        volunteers: [
+          { id: 's6', name: 'Riya Agarwal', branch: 'Electronics' },
+        ],
+      },
+      status: 'submitted' as const,
+      priority: 'high' as const,
+      eventDate: '2024-04-15',
+      location: 'Main Auditorium',
+    },
+    {
+      id: 'pending-2',
+      title: 'Hackathon 2024',
+      description: '48-hour coding marathon with exciting challenges',
+      submittedAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
+      submittedBy: {
+        id: 'f2',
+        name: 'Dr. Mike Johnson',
+        role: 'Faculty',
+      },
+      host: {
+        id: 's1',
+        name: 'Alex Kumar',
+        branch: 'Computer Science',
+      },
+      assignedRoles: {
+        teachers: [
+          { id: 't3', name: 'Dr. Mike Johnson', branch: 'Mechanical' },
+        ],
+        coHosts: [],
+        coordinators: [
+          { id: 's2', name: 'Priya Patel', branch: 'Electronics' },
+        ],
+        volunteers: [
+          { id: 's5', name: 'Amit Gupta', branch: 'Mechanical' },
+          { id: 's6', name: 'Riya Agarwal', branch: 'Electronics' },
+        ],
+      },
+      status: 'submitted' as const,
+      priority: 'medium' as const,
+      eventDate: '2024-05-01',
+      location: 'Computer Lab Complex',
     },
   ]);
 
@@ -130,6 +217,16 @@ const EventsPage: React.FC = () => {
           />
         </div>
         <div className="flex gap-2">
+          {user?.role === 'student' && hostNotifications.length > 0 && (
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 border-orange-200 text-orange-700 hover:bg-orange-50"
+              onClick={() => setCurrentTab('host-requests')}
+            >
+              <AlertCircle className="h-4 w-4" />
+              Host Requests ({hostNotifications.length})
+            </Button>
+          )}
           {user?.role === 'student' && draftEvents.length > 0 && (
             <Button
               variant="outline"
@@ -138,6 +235,16 @@ const EventsPage: React.FC = () => {
             >
               <FileEdit className="h-4 w-4" />
               Draft Events ({draftEvents.length})
+            </Button>
+          )}
+          {user?.role === 'faculty' && pendingApprovalEvents.length > 0 && (
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 border-blue-200 text-blue-700 hover:bg-blue-50"
+              onClick={() => setCurrentTab('pending-approval')}
+            >
+              <Clock className="h-4 w-4" />
+              Pending Approval ({pendingApprovalEvents.length})
             </Button>
           )}
           {user?.role === 'faculty' && (
@@ -155,8 +262,14 @@ const EventsPage: React.FC = () => {
       <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="all">All Events</TabsTrigger>
+          {user?.role === 'student' && hostNotifications.length > 0 && (
+            <TabsTrigger value="host-requests">Host Requests ({hostNotifications.length})</TabsTrigger>
+          )}
           {user?.role === 'student' && draftEvents.length > 0 && (
-            <TabsTrigger value="drafts">My Draft Events</TabsTrigger>
+            <TabsTrigger value="drafts">My Draft Events ({draftEvents.length})</TabsTrigger>
+          )}
+          {user?.role === 'faculty' && pendingApprovalEvents.length > 0 && (
+            <TabsTrigger value="pending-approval">Pending Approval ({pendingApprovalEvents.length})</TabsTrigger>
           )}
         </TabsList>
 
@@ -214,16 +327,124 @@ const EventsPage: React.FC = () => {
         </TabsContent>
 
         {user?.role === 'student' && (
-          <TabsContent value="drafts" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {draftEvents.map((event) => (
-                <DraftEventCard
+          <>
+            {/* Host Requests Tab */}
+            <TabsContent value="host-requests" className="space-y-4">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <AlertCircle className="h-5 w-5 text-orange-600" />
+                  <h2 className="text-lg font-semibold">Host Assignment Requests</h2>
+                  <Badge variant="outline" className="bg-orange-100 text-orange-800">
+                    {hostNotifications.length} Pending
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground mb-6">
+                  You have been assigned as the host for the following events. Please review and respond to each request.
+                </p>
+                
+                {hostNotifications.map((notification) => (
+                  <StudentHostNotificationCard
+                    key={notification.id}
+                    notification={notification}
+                    onAccept={() => {
+                      // Handle acceptance logic
+                      console.log('Accepted host role for', notification.eventTitle);
+                    }}
+                    onDecline={() => {
+                      // Handle decline logic
+                      console.log('Declined host role for', notification.eventTitle);
+                    }}
+                  />
+                ))}
+                
+                {hostNotifications.length === 0 && (
+                  <div className="text-center py-12">
+                    <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No host requests</h3>
+                    <p className="text-gray-600">
+                      You don't have any pending host assignment requests at the moment.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            {/* Draft Events Tab */}
+            <TabsContent value="drafts" className="space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <FileEdit className="h-5 w-5 text-blue-600" />
+                <h2 className="text-lg font-semibold">My Draft Events</h2>
+                <Badge variant="outline" className="bg-blue-100 text-blue-800">
+                  {draftEvents.length} Drafts
+                </Badge>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {draftEvents.map((event) => (
+                  <DraftEventCard
+                    key={event.id}
+                    event={event}
+                    onEdit={handleEditDraft}
+                  />
+                ))}
+              </div>
+              
+              {draftEvents.length === 0 && (
+                <div className="text-center py-12">
+                  <FileEdit className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No draft events</h3>
+                  <p className="text-gray-600">
+                    You don't have any draft events assigned to you at the moment.
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+          </>
+        )}
+
+        {user?.role === 'faculty' && (
+          <TabsContent value="pending-approval" className="space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Clock className="h-5 w-5 text-blue-600" />
+              <h2 className="text-lg font-semibold">Events Pending Approval</h2>
+              <Badge variant="outline" className="bg-blue-100 text-blue-800">
+                {pendingApprovalEvents.length} Pending
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mb-6">
+              Review and approve events that have been submitted by faculty members and their assigned hosts.
+            </p>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {pendingApprovalEvents.map((event) => (
+                <ApprovalPendingEventCard
                   key={event.id}
                   event={event}
-                  onEdit={handleEditDraft}
+                  onApprove={(eventId) => {
+                    console.log('Approved event:', eventId);
+                    // Handle approval logic
+                  }}
+                  onReject={(eventId) => {
+                    console.log('Rejected event:', eventId);
+                    // Handle rejection logic
+                  }}
+                  onView={(eventId) => {
+                    console.log('View event details:', eventId);
+                    // Handle view details logic
+                  }}
                 />
               ))}
             </div>
+            
+            {pendingApprovalEvents.length === 0 && (
+              <div className="text-center py-12">
+                <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No pending approvals</h3>
+                <p className="text-gray-600">
+                  All submitted events have been reviewed. New submissions will appear here.
+                </p>
+              </div>
+            )}
           </TabsContent>
         )}
       </Tabs>
